@@ -1,0 +1,1383 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI-Powered Smart Food Rescue Network</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17211b;
+      --muted: #617067;
+      --line: #dbe4dc;
+      --paper: #fbfcf8;
+      --panel: #ffffff;
+      --green: #237a57;
+      --green-2: #0e5f52;
+      --yellow: #f1b84b;
+      --red: #d95e45;
+      --blue: #3976a8;
+      --shadow: 0 18px 48px rgba(23, 33, 27, .12);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 280px 1fr;
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 24px;
+      color: #f8fff9;
+      background:
+        linear-gradient(180deg, rgba(8, 65, 54, .92), rgba(11, 82, 62, .96)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='920' viewBox='0 0 640 920'%3E%3Crect width='640' height='920' fill='%2312564a'/%3E%3Cpath d='M75 105c90-58 199-59 274-5 88 64 132 192 82 283-39 72-136 101-224 80C84 433 12 330 25 226c6-49 24-90 50-121Z' fill='%233e9c73' opacity='.35'/%3E%3Cpath d='M472 580c94-27 150 43 135 128-16 92-110 151-198 131-82-19-131-98-98-167 26-53 88-71 161-92Z' fill='%23f0ba4b' opacity='.32'/%3E%3Cpath d='M112 686c43-50 119-63 172-30 62 39 74 126 33 185-40 58-130 74-189 35-63-41-65-132-16-190Z' fill='%23ffffff' opacity='.12'/%3E%3C/svg%3E");
+      background-size: cover;
+    }
+
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border: 1px solid rgba(255,255,255,.32);
+      border-radius: 8px;
+      background: rgba(255,255,255,.13);
+      font-size: 25px;
+    }
+
+    h1 {
+      margin: 18px 0 10px;
+      font-size: 30px;
+      line-height: 1.04;
+      letter-spacing: 0;
+    }
+
+    .side-copy {
+      margin: 0 0 28px;
+      color: rgba(248,255,249,.78);
+      line-height: 1.55;
+    }
+
+    nav {
+      display: grid;
+      gap: 8px;
+      margin-top: 26px;
+    }
+
+    .nav-btn {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 8px;
+      padding: 12px 14px;
+      color: #effff2;
+      background: rgba(255,255,255,.09);
+      text-align: left;
+    }
+
+    .nav-btn.active {
+      color: #123928;
+      background: #f7fbef;
+      border-color: #f7fbef;
+      font-weight: 750;
+    }
+
+    .emergency {
+      margin-top: 30px;
+      padding: 14px;
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 8px;
+      background: rgba(11, 35, 30, .32);
+    }
+
+    .emergency strong { display: block; margin-bottom: 6px; }
+    .emergency span { color: rgba(248,255,249,.78); line-height: 1.45; }
+
+    main {
+      min-width: 0;
+      padding: 28px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .kicker {
+      margin: 0 0 4px;
+      color: var(--green-2);
+      font-size: 13px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 28px;
+      letter-spacing: 0;
+    }
+
+    .status-pill {
+      min-width: 190px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 9px 14px;
+      background: var(--panel);
+      color: var(--muted);
+      text-align: center;
+      box-shadow: 0 8px 20px rgba(23, 33, 27, .06);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(310px, .82fr) minmax(360px, 1.18fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .wide-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .panel, .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 10px 30px rgba(23, 33, 27, .06);
+    }
+
+    .panel { padding: 18px; }
+
+    .panel h3 {
+      margin: 0 0 14px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      margin-bottom: 12px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid #cfd9d1;
+      border-radius: 7px;
+      padding: 10px 11px;
+      color: var(--ink);
+      background: #fff;
+      outline: none;
+    }
+
+    textarea { min-height: 76px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px rgba(35,122,87,.12); }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .action-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .primary, .secondary {
+      border: 0;
+      border-radius: 7px;
+      min-height: 44px;
+      padding: 10px 14px;
+      font-weight: 800;
+    }
+
+    .primary { color: #fff; background: var(--green); }
+    .secondary { color: var(--green-2); background: #eaf4ed; }
+
+    .hero-visual {
+      min-height: 230px;
+      display: grid;
+      align-items: end;
+      overflow: hidden;
+      color: #fff;
+      background:
+        linear-gradient(180deg, rgba(11, 36, 29, .04), rgba(11, 36, 29, .82)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='920' height='520' viewBox='0 0 920 520'%3E%3Crect width='920' height='520' fill='%23d6efe0'/%3E%3Cpath d='M0 372h920v148H0z' fill='%234f875a'/%3E%3Cpath d='M55 279h164v94H55z' fill='%23f7f2e8'/%3E%3Cpath d='M86 315h33v58H86zm66-18h34v76h-34z' fill='%2399c6b2'/%3E%3Cpath d='M294 253h207v120H294z' fill='%23fff8e8'/%3E%3Cpath d='M331 291h44v82h-44zm82-28h47v110h-47z' fill='%23e8b751'/%3E%3Cpath d='M566 290h260v83H566z' fill='%23f2f8ff'/%3E%3Cpath d='M610 318h38v55h-38zm80-17h39v72h-39zm79 29h32v43h-32z' fill='%2379a9cf'/%3E%3Ccircle cx='175' cy='383' r='39' fill='%23272f2b'/%3E%3Ccircle cx='719' cy='383' r='39' fill='%23272f2b'/%3E%3Cpath d='M176 346h543c33 0 61 27 61 61H115c0-34 27-61 61-61Z' fill='%23f06449'/%3E%3Cpath d='M255 297h321c55 0 101 49 112 83H184c11-34 46-83 71-83Z' fill='%23ffffff'/%3E%3Cpath d='M319 322h74v51h-74zm111 0h84v51h-84zm119 0h74v51h-74z' fill='%239bd6e8'/%3E%3Ccircle cx='175' cy='383' r='18' fill='%23d9e2da'/%3E%3Ccircle cx='719' cy='383' r='18' fill='%23d9e2da'/%3E%3Cpath d='M105 176c43-23 81-19 115 11 47-55 102-63 165-23 42-39 98-40 154-4 49-31 103-29 163 7' fill='none' stroke='%23ffffff' stroke-width='18' stroke-linecap='round' opacity='.75'/%3E%3C/svg%3E");
+      background-size: cover;
+      background-position: center;
+    }
+
+    .hero-visual div { padding: 18px; }
+    .hero-visual strong { display: block; font-size: 24px; line-height: 1.1; }
+    .hero-visual span { color: rgba(255,255,255,.84); }
+
+    .score-card {
+      display: grid;
+      grid-template-columns: 112px 1fr;
+      gap: 18px;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .score-ring {
+      width: 112px;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: conic-gradient(var(--green) calc(var(--score) * 1%), #e8eee9 0);
+      position: relative;
+      isolation: isolate;
+    }
+
+    .score-ring::after {
+      content: "";
+      position: absolute;
+      inset: 10px;
+      border-radius: 50%;
+      background: #fff;
+      z-index: -1;
+    }
+
+    .score-ring span { font-size: 26px; font-weight: 900; }
+
+    .muted { color: var(--muted); }
+    .small { font-size: 13px; line-height: 1.45; }
+
+    .cards {
+      display: grid;
+      gap: 12px;
+    }
+
+    .card {
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      width: fit-content;
+      border-radius: 999px;
+      padding: 5px 9px;
+      background: #eef6f1;
+      color: var(--green-2);
+      font-size: 12px;
+      font-weight: 850;
+    }
+
+    .badge.warn { color: #7a4d00; background: #fff3d6; }
+    .badge.hot { color: #9b2d1f; background: #ffe9e3; }
+    .badge.blue { color: #24577f; background: #e9f3fb; }
+
+    .metric {
+      padding: 14px;
+      min-height: 108px;
+    }
+
+    .metric span { color: var(--muted); font-size: 13px; font-weight: 800; }
+    .metric strong { display: block; margin-top: 8px; font-size: 28px; letter-spacing: 0; }
+
+    .progress {
+      height: 9px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e8eee9;
+    }
+
+    .progress b {
+      display: block;
+      height: 100%;
+      width: var(--w);
+      background: var(--green);
+    }
+
+    .route {
+      display: grid;
+      gap: 10px;
+      counter-reset: stop;
+    }
+
+    .stop {
+      display: grid;
+      grid-template-columns: 32px 1fr auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .stop::before {
+      counter-increment: stop;
+      content: counter(stop);
+      width: 32px;
+      height: 32px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--blue);
+      font-weight: 900;
+    }
+
+    .qr {
+      width: 92px;
+      aspect-ratio: 1;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .qr i { background: var(--ink); border-radius: 2px; }
+    .qr i:nth-child(2n) { opacity: .18; }
+    .qr i:nth-child(3n) { opacity: .82; }
+
+    .chart {
+      height: 190px;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 9px;
+      align-items: end;
+      padding-top: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .bar {
+      min-width: 0;
+      display: grid;
+      align-items: end;
+      gap: 7px;
+      height: 100%;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .bar b {
+      display: block;
+      min-height: 10px;
+      border-radius: 7px 7px 0 0;
+      background: linear-gradient(180deg, var(--yellow), var(--green));
+      height: var(--h);
+    }
+
+    .hidden { display: none !important; }
+
+    .app-hidden { display: none; }
+
+    .auth-wrap {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(280px, .9fr) minmax(320px, 1.1fr);
+      background:
+        linear-gradient(120deg, rgba(8, 65, 54, .94), rgba(35, 122, 87, .82)),
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='700' viewBox='0 0 900 700'%3E%3Crect width='900' height='700' fill='%23d9efe2'/%3E%3Cpath d='M0 510h900v190H0z' fill='%234f875a'/%3E%3Cpath d='M80 360h210v150H80z' fill='%23fff8e8'/%3E%3Cpath d='M370 290h250v220H370z' fill='%23f8f2e3'/%3E%3Cpath d='M680 340h150v170H680z' fill='%23e9f4fb'/%3E%3Ccircle cx='250' cy='520' r='55' fill='%23272f2b'/%3E%3Ccircle cx='645' cy='520' r='55' fill='%23272f2b'/%3E%3Cpath d='M250 470h400c44 0 80 36 80 80H170c0-44 36-80 80-80Z' fill='%23f06449'/%3E%3Cpath d='M145 180c75-48 158-51 245-9 78-62 170-61 276 2' fill='none' stroke='%23ffffff' stroke-width='22' stroke-linecap='round' opacity='.78'/%3E%3C/svg%3E");
+      background-size: cover;
+      color: #fff;
+    }
+
+    .auth-hero {
+      padding: 34px;
+      display: grid;
+      align-content: end;
+      min-height: 100vh;
+    }
+
+    .auth-hero h1 {
+      max-width: 520px;
+      margin-bottom: 12px;
+      font-size: clamp(34px, 6vw, 62px);
+    }
+
+    .auth-hero p {
+      max-width: 560px;
+      margin: 0;
+      color: rgba(255,255,255,.82);
+      font-size: 18px;
+      line-height: 1.55;
+    }
+
+    .auth-panel-wrap {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      background: rgba(251, 252, 248, .92);
+    }
+
+    .auth-panel {
+      width: min(100%, 460px);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 22px;
+      background: #fff;
+      color: var(--ink);
+      box-shadow: var(--shadow);
+    }
+
+
+    .auth-panel.auth-panel-wide { width: min(100%, 520px); }
+
+    .auth-form { display: grid; gap: 2px; }
+
+    .form-error {
+      margin-top: 12px;
+      min-height: 20px;
+      color: #a93524;
+      font-size: 13px;
+      font-weight: 750;
+      line-height: 1.4;
+    }
+
+    .form-success {
+      margin-top: 12px;
+      min-height: 20px;
+      color: var(--green-2);
+      font-size: 13px;
+      font-weight: 750;
+      line-height: 1.4;
+    }
+
+    .auth-switch {
+      margin: 16px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      text-align: center;
+    }
+
+    .auth-link {
+      border: 0;
+      padding: 0;
+      color: var(--green-2);
+      background: transparent;
+      font-weight: 850;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .otp-box {
+      margin-top: 4px;
+      padding: 12px;
+      border: 1px dashed rgba(35,122,87,.38);
+      border-radius: 8px;
+      background: #f3faf5;
+    }
+    .auth-panel h2 { margin-bottom: 8px; }
+    .auth-panel p { margin: 0 0 18px; }
+
+    .role-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .role-chip {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      color: var(--muted);
+      background: #fff;
+      text-align: left;
+      font-weight: 800;
+    }
+
+    .role-chip.active {
+      color: var(--green-2);
+      border-color: rgba(35,122,87,.46);
+      background: #eef6f1;
+      box-shadow: 0 0 0 3px rgba(35,122,87,.1);
+    }
+
+    .auth-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .auth-note {
+      margin-top: 14px;
+      padding: 10px 12px;
+      border: 1px dashed rgba(35,122,87,.38);
+      border-radius: 8px;
+      background: #f3faf5;
+      color: var(--green-2);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .status-actions {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      position: relative;
+    }
+
+    .profile-btn {
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--green-2);
+      font-weight: 900;
+      box-shadow: 0 8px 20px rgba(23,33,27,.1);
+    }
+
+    .profile-popover {
+      position: absolute;
+      top: 54px;
+      right: 0;
+      width: min(320px, calc(100vw - 42px));
+      z-index: 10;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+
+    .profile-popover h3 { margin: 0 0 4px; }
+    .profile-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      border-top: 1px solid var(--line);
+      padding: 10px 0;
+      font-size: 13px;
+    }
+    .profile-row span:first-child { color: var(--muted); font-weight: 800; }
+    .profile-row span:last-child { text-align: right; }
+
+    @media (max-width: 980px) {
+      .auth-wrap { grid-template-columns: 1fr; }
+      .auth-hero { min-height: 42vh; }
+      .auth-panel-wrap { min-height: 58vh; }
+      .app-shell { grid-template-columns: 1fr; }
+      aside {
+        position: relative;
+        height: auto;
+      }
+      nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid, .wide-grid { grid-template-columns: 1fr; }
+      .topbar { align-items: start; flex-direction: column; }
+      .status-actions, .status-pill { min-width: 0; width: 100%; }
+    }
+
+    @media (max-width: 560px) {
+      .auth-hero, .auth-panel-wrap { padding: 18px; }
+      .role-grid, .auth-actions { grid-template-columns: 1fr; }
+      main, aside { padding: 18px; }
+      nav, .row { grid-template-columns: 1fr; }
+      h1 { font-size: 26px; }
+      h2 { font-size: 23px; }
+      .score-card { grid-template-columns: 1fr; }
+      .stop { grid-template-columns: 32px 1fr; }
+      .stop .badge { grid-column: 2; }
+    }
+  </style>
+</head>
+<body>
+  <section class="auth-wrap" id="authScreen">
+    <div class="auth-hero">
+      <div>
+        <div class="brand-mark">♻</div>
+        <h1>Food rescue, matched in minutes.</h1>
+        <p>Choose whether you are donating surplus food or requesting food for an NGO. The prototype then shows only the tools that fit your role.</p>
+      </div>
+    </div>
+    <div class="auth-panel-wrap">
+      <div class="auth-panel auth-panel-wide">
+        <div id="loginView" class="auth-view">
+          <p class="kicker">Secure login</p>
+          <h2>Welcome back</h2>
+          <p class="muted small">Log in with your registered username and password.</p>
+
+          <div class="auth-form">
+            <label>User Type
+              <select id="loginUserType">
+                <option value="ngo">NGO</option>
+                <option value="donor" selected>Food Donor</option>
+              </select>
+            </label>
+            <label>Username
+              <input id="loginUsername" autocomplete="username" placeholder="Enter your username">
+            </label>
+            <label>Password
+              <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Enter your password">
+            </label>
+            <button class="primary" id="loginBtn" type="button" style="width:100%">Continue to dashboard</button>
+            <div class="form-error" id="loginError" aria-live="polite"></div>
+          </div>
+
+          <p class="auth-switch">Don't have an account? <button class="auth-link" id="showSignupBtn" type="button">Sign Up</button></p>
+        </div>
+
+        <div id="signupView" class="auth-view hidden">
+          <p class="kicker">Create account</p>
+          <h2>Sign Up</h2>
+          <p class="muted small">Verify your phone number with OTP before your account is created.</p>
+
+          <div class="auth-form" id="signupForm">
+            <label>Full Name
+              <input id="signupFullName" autocomplete="name" placeholder="Enter full name">
+            </label>
+            <label>Username
+              <input id="signupUsername" autocomplete="username" placeholder="Choose a username">
+            </label>
+            <label>Phone Number
+              <input id="signupPhone" autocomplete="tel" inputmode="tel" placeholder="Enter phone number">
+            </label>
+            <label>Email
+              <input id="signupEmail" autocomplete="email" type="email" placeholder="Enter email address">
+            </label>
+            <label>Password
+              <input id="signupPassword" type="password" autocomplete="new-password" placeholder="Create password">
+            </label>
+            <label>Confirm Password
+              <input id="signupConfirmPassword" type="password" autocomplete="new-password" placeholder="Re-enter password">
+            </label>
+            <label>User Type
+              <select id="signupUserType">
+                <option value="ngo">NGO</option>
+                <option value="donor">Food Donor</option>
+              </select>
+            </label>
+            <button class="primary" id="sendOtpBtn" type="button" style="width:100%">Send OTP</button>
+            <div class="otp-box hidden" id="otpBox">
+              <label>Enter OTP
+                <input id="otpInput" inputmode="numeric" maxlength="6" placeholder="6-digit OTP">
+              </label>
+              <button class="secondary" id="verifyOtpBtn" type="button" style="width:100%">Verify OTP & Create Account</button>
+            </div>
+            <div class="form-error" id="signupError" aria-live="polite"></div>
+            <div class="form-success" id="signupSuccess" aria-live="polite"></div>
+          </div>
+
+          <p class="auth-switch">Already have an account? <button class="auth-link" id="showLoginBtn" type="button">Log In</button></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="app-shell app-hidden" id="appShell">
+    <aside>
+      <div class="brand-mark">♻</div>
+      <h1>AI-Powered Smart Food Rescue Network</h1>
+      <p class="side-copy">Donate surplus food from restaurants, events, hostels, supermarkets, and homes before it expires.</p>
+      <nav aria-label="Prototype sections">
+        <button class="nav-btn active" data-tab="donor" data-roles="donor">Donor Rescue</button>
+        <button class="nav-btn" data-tab="ngo" data-roles="ngo">NGO Demand</button>
+        <button class="nav-btn" data-tab="routes" data-roles="donor ngo">Routes & Tracking</button>
+        <button class="nav-btn" data-tab="impact" data-roles="donor ngo">Impact Dashboard</button>
+      </nav>
+      <div class="emergency">
+        <strong>Emergency mode</strong>
+        <span id="emergencyText">2 donations expire within 60 minutes. Nearby volunteers are on instant alert.</span>
+      </div>
+    </aside>
+
+    <main>
+      <div class="topbar">
+        <div>
+          <p class="kicker">Hackathon prototype</p>
+          <h2 id="pageTitle">Donor Rescue</h2>
+        </div>
+        <div class="status-actions">
+          <div class="status-pill" id="liveStatus">Live demo data loaded</div>
+          <button class="profile-btn" id="profileBtn" type="button" aria-label="Open profile">SD</button>
+          <div class="profile-popover hidden" id="profilePanel">
+            <h3 id="profileName">Sri Devi Wedding Hall</h3>
+            <p class="muted small" id="profileRole">Food donor account</p>
+            <div class="profile-row"><span>Contact</span><span id="profileContact">demo@foodrescue.org</span></div>
+            <div class="profile-row"><span>Role</span><span id="profileType">Food donor</span></div>
+            <div class="profile-row"><span>Verified</span><span>Yes</span></div>
+            <button class="secondary" id="logoutBtn" type="button" style="width:100%; margin-top:8px">Log out</button>
+          </div>
+        </div>
+      </div>
+
+      <section id="donor" class="tab">
+        <div class="grid">
+          <div class="panel">
+            <h3>Post Surplus Food</h3>
+            <label>Donor type
+              <select id="donorType">
+                <option>Wedding hall</option>
+                <option>Restaurant</option>
+                <option>Hostel mess</option>
+                <option>Supermarket</option>
+                <option>Household function</option>
+              </select>
+            </label>
+            <label>Food item
+              <input id="foodName" value="Vegetable biryani and curd rice">
+            </label>
+            <div class="row">
+              <label>Meals available
+                <input id="meals" type="number" min="1" value="120">
+              </label>
+              <label>Safe for next
+                <select id="hours">
+                  <option value="1">1 hour</option>
+                  <option value="2">2 hours</option>
+                  <option value="4" selected>4 hours</option>
+                  <option value="6">6 hours</option>
+                </select>
+              </label>
+            </div>
+            <div class="row">
+              <label>Temperature
+                <select id="temp">
+                  <option value="hot">Hot packed</option>
+                  <option value="room" selected>Room temperature</option>
+                  <option value="cold">Cold storage</option>
+                </select>
+              </label>
+              <label>Packaging
+                <select id="packaging">
+                  <option value="sealed" selected>Sealed containers</option>
+                  <option value="covered">Covered trays</option>
+                  <option value="open">Open trays</option>
+                </select>
+              </label>
+            </div>
+            <label>Pickup location
+              <input id="location" value="Anna Nagar Function Hall">
+            </label>
+            <label>Food photo
+              <input id="photo" type="file" accept="image/*">
+            </label>
+            <div class="action-row">
+              <button class="primary" id="analyzeBtn">Analyze & Notify NGOs</button>
+              <button class="secondary" id="sampleBtn">Use urgent sample</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel hero-visual">
+              <div>
+                <strong>From event leftovers to verified nearby help.</strong>
+                <span>AI prioritizes food safety, distance, quantity, urgency, and pickup capacity.</span>
+              </div>
+            </div>
+            <div class="panel" style="margin-top:18px">
+              <div class="score-card">
+                <div class="score-ring" id="scoreRing" style="--score: 82"><span id="scoreText">82</span></div>
+                <div>
+                  <h3 id="safetyTitle">AI Food Safety Score: Good to donate</h3>
+                  <p class="muted small" id="safetyDetails">Sealed food with 4 hours remaining is safe for fast pickup. NGOs with large meal demand are prioritized.</p>
+                  <span class="badge" id="decisionBadge">Approved for rescue</span>
+                </div>
+              </div>
+              <h3>Smart Matches</h3>
+              <div class="cards" id="matchCards"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="ngo" class="tab hidden">
+        <div class="grid">
+          <div class="panel">
+            <h3>Request Food</h3>
+            <label>NGO / shelter
+              <input id="ngoName" value="Hope Shelter">
+            </label>
+            <div class="row">
+              <label>People to feed
+                <input id="people" type="number" min="1" value="85">
+              </label>
+              <label>Search radius
+                <select id="radius">
+                  <option value="3">3 km</option>
+                  <option value="5" selected>5 km</option>
+                  <option value="10">10 km</option>
+                </select>
+              </label>
+            </div>
+            <label>Storage available
+              <select id="storage">
+                <option>Can serve immediately</option>
+                <option>Cold storage available</option>
+                <option>Dry food preferred</option>
+              </select>
+            </label>
+            <label>Notes
+              <textarea id="needNotes">Dinner requirement for shelter residents by 8:30 PM.</textarea>
+            </label>
+            <button class="primary" id="rankBtn">Find Priority Donors</button>
+          </div>
+          <div class="panel">
+            <h3>AI Priority Restaurant List</h3>
+            <p class="muted small" id="requirementText">Estimated food requirement: 106 meals including buffer.</p>
+            <div class="cards" id="donorCards"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="routes" class="tab hidden">
+        <div class="grid">
+          <div class="panel">
+            <h3>Optimized Pickup Route</h3>
+            <div class="route" id="routeList"></div>
+          </div>
+          <div class="panel">
+            <h3>Donation Tracking QR</h3>
+            <div class="row" style="align-items:center">
+              <div class="qr" aria-label="QR code preview">
+                <i></i><i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i><i></i>
+                <i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <div>
+                <span class="badge blue">FRN-0726-118</span>
+                <p class="muted small">Scan at pickup and delivery to record handoff, timestamp, volunteer, and recipient.</p>
+              </div>
+            </div>
+            <div class="cards" style="margin-top:16px">
+              <div class="card"><strong>Pickup confirmed</strong><span class="muted small">Volunteer Kavya accepted the route at 7:12 PM.</span></div>
+              <div class="card"><strong>Expiry countdown</strong><span class="muted small" id="countdown">Delivery should finish within 3h 42m.</span></div>
+              <div class="card"><strong>NGO verification</strong><span class="muted small">Hope Shelter has verified registration, address, and contact person.</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="impact" class="tab hidden">
+        <div class="wide-grid">
+          <div class="panel metric"><span>Meals saved</span><strong id="mealMetric">18,420</strong></div>
+          <div class="panel metric"><span>CO2 prevented</span><strong>6.8 t</strong></div>
+          <div class="panel metric"><span>Money saved</span><strong>₹4.9L</strong></div>
+          <div class="panel metric"><span>Fast rescues</span><strong>91%</strong></div>
+        </div>
+        <div class="grid">
+          <div class="panel">
+            <h3>Leftover Prediction</h3>
+            <p class="muted small">Restaurants get daily predictions to reduce over-preparation and share extra food earlier.</p>
+            <div class="chart" id="chart"></div>
+          </div>
+          <div class="panel">
+            <h3>Leaderboard</h3>
+            <div class="cards" id="leaderboard"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const ngos = [
+      { name: "Hope Shelter", distance: 1.8, need: 110, vehicle: "van", storage: "serve now", verified: true },
+      { name: "Anbu Old Age Home", distance: 2.6, need: 70, vehicle: "auto", storage: "hot meals", verified: true },
+      { name: "Little Hands Home", distance: 4.3, need: 95, vehicle: "bike + car", storage: "sealed only", verified: true }
+    ];
+
+    const donors = [
+      { name: "Green Leaf Restaurant", distance: 1.4, avg: 38, today: 44, urgency: 72 },
+      { name: "Sri Devi Wedding Hall", distance: 2.1, avg: 130, today: 150, urgency: 94 },
+      { name: "City Hostel Mess", distance: 3.2, avg: 55, today: 49, urgency: 64 },
+      { name: "FreshMart Supermarket", distance: 4.7, avg: 28, today: 32, urgency: 48 }
+    ];
+
+    const routeStops = [
+      ["Sri Devi Wedding Hall", "120 meals", "Pickup 7:25 PM"],
+      ["Green Leaf Restaurant", "44 meals", "Pickup 7:45 PM"],
+      ["Hope Shelter", "Delivery", "Arrive 8:05 PM"]
+    ];
+
+    const days = [
+      ["Mon", 22], ["Tue", 28], ["Wed", 31], ["Thu", 26], ["Fri", 52], ["Sat", 46], ["Sun", 35]
+    ];
+
+    const leaders = [
+      ["Sri Devi Wedding Hall", "2,940 meals rescued"],
+      ["Green Leaf Restaurant", "1,880 meals rescued"],
+      ["Volunteer Kavya", "126 completed pickups"],
+      ["City Hostel Mess", "1,105 meals rescued"]
+    ];
+
+    const USER_STORAGE_KEY = "resqmealUsers";
+    const SESSION_STORAGE_KEY = "resqmealCurrentUser";
+    let currentUser = null;
+    let pendingSignup = null;
+    let pendingOtp = "";
+
+    const authScreen = document.getElementById("authScreen");
+    const appShell = document.getElementById("appShell");
+    const loginView = document.getElementById("loginView");
+    const signupView = document.getElementById("signupView");
+    const loginUserType = document.getElementById("loginUserType");
+    const loginUsername = document.getElementById("loginUsername");
+    const loginPassword = document.getElementById("loginPassword");
+    const loginError = document.getElementById("loginError");
+    const signupError = document.getElementById("signupError");
+    const signupSuccess = document.getElementById("signupSuccess");
+    const otpBox = document.getElementById("otpBox");
+    const profileBtn = document.getElementById("profileBtn");
+    const profilePanel = document.getElementById("profilePanel");
+
+    const tabs = document.querySelectorAll(".tab");
+    const navButtons = document.querySelectorAll(".nav-btn");
+    const pageTitle = document.getElementById("pageTitle");
+    const liveStatus = document.getElementById("liveStatus");
+
+    navButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        showTab(button.dataset.tab);
+      });
+    });
+
+    document.getElementById("loginBtn").addEventListener("click", login);
+    document.getElementById("showSignupBtn").addEventListener("click", () => showAuthView("signup"));
+    document.getElementById("showLoginBtn").addEventListener("click", () => showAuthView("login"));
+    document.getElementById("sendOtpBtn").addEventListener("click", sendOtp);
+    document.getElementById("verifyOtpBtn").addEventListener("click", verifyOtpAndCreateAccount);
+    document.getElementById("logoutBtn").addEventListener("click", logout);
+    loginPassword.addEventListener("keydown", event => {
+      if (event.key === "Enter") login();
+    });
+    document.getElementById("otpInput").addEventListener("keydown", event => {
+      if (event.key === "Enter") verifyOtpAndCreateAccount();
+    });
+    profileBtn.addEventListener("click", () => profilePanel.classList.toggle("hidden"));
+    document.addEventListener("click", event => {
+      if (!profilePanel.contains(event.target) && event.target !== profileBtn) {
+        profilePanel.classList.add("hidden");
+      }
+    });
+
+
+    function initials(name) {
+      return name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(part => part[0].toUpperCase())
+        .join("") || "FR";
+    }
+
+    function getUsers() {
+      try {
+        return JSON.parse(localStorage.getItem(USER_STORAGE_KEY)) || [];
+      } catch (error) {
+        return [];
+      }
+    }
+
+    function saveUsers(users) {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(users));
+    }
+
+    function normalizeUsername(username) {
+      return username.trim().toLowerCase();
+    }
+
+    function roleLabel(role) {
+      return role === "ngo" ? "NGO" : "Food Donor";
+    }
+
+    function showAuthView(view) {
+      loginError.textContent = "";
+      signupError.textContent = "";
+      signupSuccess.textContent = "";
+      loginView.classList.toggle("hidden", view !== "login");
+      signupView.classList.toggle("hidden", view !== "signup");
+      location.hash = view;
+    }
+
+    function validateSignup() {
+      const account = {
+        fullName: document.getElementById("signupFullName").value.trim(),
+        username: document.getElementById("signupUsername").value.trim(),
+        phone: document.getElementById("signupPhone").value.trim(),
+        email: document.getElementById("signupEmail").value.trim(),
+        password: document.getElementById("signupPassword").value,
+        confirmPassword: document.getElementById("signupConfirmPassword").value,
+        role: document.getElementById("signupUserType").value
+      };
+
+      if (!account.fullName || !account.username || !account.phone || !account.email || !account.password || !account.confirmPassword) {
+        return { error: "Please fill in every sign up field." };
+      }
+      if (!/^\S+@\S+\.\S+$/.test(account.email)) {
+        return { error: "Please enter a valid email address." };
+      }
+      if (!/^\+?[0-9\s-]{8,15}$/.test(account.phone)) {
+        return { error: "Please enter a valid phone number." };
+      }
+      if (account.password.length < 6) {
+        return { error: "Password must be at least 6 characters." };
+      }
+      if (account.password !== account.confirmPassword) {
+        return { error: "Password and confirm password do not match." };
+      }
+      const users = getUsers();
+      if (users.some(user => normalizeUsername(user.username) === normalizeUsername(account.username))) {
+        return { error: "That username is already registered." };
+      }
+      if (users.some(user => user.phone === account.phone)) {
+        return { error: "That phone number is already registered." };
+      }
+      return { account };
+    }
+
+    function sendOtp() {
+      signupError.textContent = "";
+      signupSuccess.textContent = "";
+      const result = validateSignup();
+      if (result.error) {
+        signupError.textContent = result.error;
+        otpBox.classList.add("hidden");
+        return;
+      }
+      pendingSignup = result.account;
+      pendingOtp = String(Math.floor(100000 + Math.random() * 900000));
+      otpBox.classList.remove("hidden");
+      document.getElementById("otpInput").value = "";
+      signupSuccess.textContent = `OTP sent to ${pendingSignup.phone}. For this front-end demo, use ${pendingOtp}.`;
+    }
+
+    function verifyOtpAndCreateAccount() {
+      signupError.textContent = "";
+      const enteredOtp = document.getElementById("otpInput").value.trim();
+      if (!pendingSignup || !pendingOtp) {
+        signupError.textContent = "Please send OTP first.";
+        return;
+      }
+      if (enteredOtp !== pendingOtp) {
+        signupError.textContent = "Invalid OTP. Please check and try again.";
+        return;
+      }
+      const users = getUsers();
+      const newUser = {
+        fullName: pendingSignup.fullName,
+        username: pendingSignup.username,
+        phone: pendingSignup.phone,
+        email: pendingSignup.email,
+        password: pendingSignup.password,
+        role: pendingSignup.role,
+        createdAt: new Date().toISOString(),
+        verified: true
+      };
+      users.push(newUser);
+      saveUsers(users);
+      pendingSignup = null;
+      pendingOtp = "";
+      signupSuccess.textContent = "Account created successfully. You can log in now.";
+      signupError.textContent = "";
+      otpBox.classList.add("hidden");
+      loginUsername.value = newUser.username;
+      loginUserType.value = newUser.role;
+      loginPassword.value = "";
+      document.getElementById("signupForm").querySelectorAll("input").forEach(input => input.value = "");
+      setTimeout(() => showAuthView("login"), 900);
+    }
+
+    function login() {
+      loginError.textContent = "";
+      const username = loginUsername.value.trim();
+      const password = loginPassword.value;
+      const role = loginUserType.value;
+      if (!username || !password) {
+        loginError.textContent = "Please enter both username and password.";
+        return;
+      }
+      const user = getUsers().find(item => normalizeUsername(item.username) === normalizeUsername(username));
+      if (!user || user.password !== password || user.role !== role) {
+        loginError.textContent = "Invalid username, password, or user type.";
+        return;
+      }
+      currentUser = user;
+      sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
+      updateProfile();
+      applyRoleAccess();
+      authScreen.classList.add("hidden");
+      appShell.classList.remove("app-hidden");
+      window.scrollTo({ top: 0, behavior: "auto" });
+      liveStatus.textContent = role === "ngo" ? "NGO tools unlocked" : "Donor tools unlocked";
+      location.hash = "dashboard";
+    }
+
+    function logout() {
+      sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      currentUser = null;
+      profilePanel.classList.add("hidden");
+      appShell.classList.add("app-hidden");
+      authScreen.classList.remove("hidden");
+      loginPassword.value = "";
+      showAuthView("login");
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+
+    function updateProfile() {
+      const displayRole = roleLabel(currentUser.role);
+      profileBtn.textContent = initials(currentUser.fullName);
+      document.getElementById("profileName").textContent = currentUser.fullName;
+      document.getElementById("profileRole").textContent = `${displayRole} account`;
+      document.getElementById("profileContact").textContent = currentUser.email || currentUser.phone;
+      document.getElementById("profileType").textContent = displayRole;
+    }
+
+    function canAccess(button) {
+      return button.dataset.roles.split(" ").includes(currentUser.role);
+    }
+
+    function applyRoleAccess() {
+      navButtons.forEach(button => {
+        button.classList.toggle("hidden", !canAccess(button));
+      });
+      const firstAllowed = [...navButtons].find(canAccess);
+      if (firstAllowed) showTab(firstAllowed.dataset.tab);
+    }
+
+    function showTab(tabId) {
+      const button = [...navButtons].find(item => item.dataset.tab === tabId);
+      if (!button || !canAccess(button)) return;
+      navButtons.forEach(item => item.classList.remove("active"));
+      tabs.forEach(tab => tab.classList.add("hidden"));
+      button.classList.add("active");
+      document.getElementById(tabId).classList.remove("hidden");
+      pageTitle.textContent = button.textContent;
+      if (tabId === "impact") {
+        liveStatus.textContent = "Impact updated from completed rescues";
+      } else if (tabId === "ngo") {
+        liveStatus.textContent = "Nearby donor predictions ready";
+      } else if (tabId === "donor") {
+        liveStatus.textContent = "Ready to analyze a donation";
+      } else {
+        liveStatus.textContent = "Tracking and route tools ready";
+      }
+    }
+
+    function scoreDonation() {
+      const meals = Number(document.getElementById("meals").value || 0);
+      const hours = Number(document.getElementById("hours").value);
+      const temp = document.getElementById("temp").value;
+      const packaging = document.getElementById("packaging").value;
+      let score = 54 + hours * 7 + Math.min(meals / 25, 8);
+      if (temp === "cold") score += 8;
+      if (temp === "hot") score += 5;
+      if (packaging === "sealed") score += 12;
+      if (packaging === "covered") score += 4;
+      if (packaging === "open") score -= 24;
+      if (hours <= 1) score -= 12;
+      score = Math.max(18, Math.min(98, Math.round(score)));
+      renderSafety(score, hours, packaging);
+      renderMatches(score, meals, hours);
+      liveStatus.textContent = score < 45 ? "Donation needs manual review" : "Nearby NGOs notified";
+    }
+
+    function renderSafety(score, hours, packaging) {
+      const ring = document.getElementById("scoreRing");
+      const text = document.getElementById("scoreText");
+      const title = document.getElementById("safetyTitle");
+      const details = document.getElementById("safetyDetails");
+      const badge = document.getElementById("decisionBadge");
+      ring.style.setProperty("--score", score);
+      ring.style.background = `conic-gradient(${score < 45 ? "var(--red)" : score < 70 ? "var(--yellow)" : "var(--green)"} ${score}%, #e8eee9 0)`;
+      text.textContent = score;
+      if (score < 45) {
+        title.textContent = "AI Food Safety Score: Needs review";
+        details.textContent = "Open or low-time food should be checked before matching. The app can pause alerts until admin approval.";
+        badge.textContent = "Manual review";
+        badge.className = "badge hot";
+      } else if (hours <= 1) {
+        title.textContent = "AI Food Safety Score: Emergency pickup";
+        details.textContent = "Food is acceptable but urgent. Volunteers within the smallest radius are notified first.";
+        badge.textContent = "Emergency alert";
+        badge.className = "badge warn";
+      } else {
+        title.textContent = "AI Food Safety Score: Good to donate";
+        details.textContent = `${packaging === "sealed" ? "Sealed" : "Covered"} food with ${hours} hours remaining is safe for fast pickup. NGOs with matching demand are prioritized.`;
+        badge.textContent = "Approved for rescue";
+        badge.className = "badge";
+      }
+    }
+
+    function renderMatches(score, meals, hours) {
+      const cards = document.getElementById("matchCards");
+      cards.innerHTML = "";
+      ngos
+        .map(ngo => {
+          const quantityFit = 100 - Math.abs(ngo.need - meals) / Math.max(ngo.need, meals, 1) * 45;
+          const urgencyBoost = hours <= 1 ? 18 / ngo.distance : 8 / ngo.distance;
+          const match = Math.round(Math.min(99, score * .35 + quantityFit * .38 + urgencyBoost + (ngo.verified ? 7 : 0)));
+          return { ...ngo, match };
+        })
+        .sort((a, b) => b.match - a.match)
+        .forEach(ngo => {
+          cards.insertAdjacentHTML("beforeend", `
+            <article class="card">
+              <div class="card-head">
+                <div><strong>${ngo.name}</strong><div class="muted small">${ngo.distance} km away · needs ${ngo.need} meals · ${ngo.vehicle}</div></div>
+                <span class="badge">${ngo.match}% match</span>
+              </div>
+              <div class="progress" aria-hidden="true"><b style="--w:${ngo.match}%"></b></div>
+            </article>
+          `);
+        });
+    }
+
+    function rankDonors() {
+      const people = Number(document.getElementById("people").value || 0);
+      const radius = Number(document.getElementById("radius").value);
+      const required = Math.ceil(people * 1.25);
+      document.getElementById("requirementText").textContent = `Estimated food requirement: ${required} meals including buffer.`;
+      const donorCards = document.getElementById("donorCards");
+      donorCards.innerHTML = "";
+      donors
+        .filter(donor => donor.distance <= radius)
+        .map(donor => ({ ...donor, priority: Math.round(donor.today * .45 + donor.avg * .35 + donor.urgency * .2 - donor.distance * 3) }))
+        .sort((a, b) => b.priority - a.priority)
+        .forEach(donor => {
+          donorCards.insertAdjacentHTML("beforeend", `
+            <article class="card">
+              <div class="card-head">
+                <div><strong>${donor.name}</strong><div class="muted small">${donor.distance} km · average ${donor.avg} leftover meals/day · predicted today ${donor.today}</div></div>
+                <span class="badge ${donor.urgency > 85 ? "hot" : "blue"}">${donor.priority} priority</span>
+              </div>
+              <button class="secondary" onclick="document.getElementById('liveStatus').textContent='Request message sent to ${donor.name}'">Send request</button>
+            </article>
+          `);
+        });
+      if (!donorCards.children.length) {
+        donorCards.innerHTML = `<div class="card"><strong>No donors inside this radius</strong><span class="muted small">Increase radius or turn on emergency alerts.</span></div>`;
+      }
+    }
+
+    function renderRoute() {
+      const routeList = document.getElementById("routeList");
+      routeList.innerHTML = "";
+      routeStops.forEach(stop => {
+        routeList.insertAdjacentHTML("beforeend", `
+          <div class="stop">
+            <div><strong>${stop[0]}</strong><div class="muted small">${stop[1]}</div></div>
+            <span class="badge blue">${stop[2]}</span>
+          </div>
+        `);
+      });
+    }
+
+    function renderImpact() {
+      const chart = document.getElementById("chart");
+      chart.innerHTML = "";
+      const max = Math.max(...days.map(day => day[1]));
+      days.forEach(day => {
+        chart.insertAdjacentHTML("beforeend", `<div class="bar"><b style="--h:${day[1] / max * 100}%"></b><span>${day[0]}<br>${day[1]}</span></div>`);
+      });
+      const board = document.getElementById("leaderboard");
+      board.innerHTML = "";
+      leaders.forEach((leader, index) => {
+        board.insertAdjacentHTML("beforeend", `<div class="card"><div class="card-head"><strong>${index + 1}. ${leader[0]}</strong><span class="badge">${leader[1]}</span></div></div>`);
+      });
+    }
+
+    document.getElementById("analyzeBtn").addEventListener("click", scoreDonation);
+    document.getElementById("sampleBtn").addEventListener("click", () => {
+      document.getElementById("donorType").value = "Household function";
+      document.getElementById("foodName").value = "Idli, sambar and lemon rice";
+      document.getElementById("meals").value = 45;
+      document.getElementById("hours").value = 1;
+      document.getElementById("temp").value = "room";
+      document.getElementById("packaging").value = "covered";
+      document.getElementById("location").value = "Velachery Housewarming Event";
+      scoreDonation();
+    });
+    document.getElementById("rankBtn").addEventListener("click", rankDonors);
+
+
+    function restoreSession() {
+      const hash = location.hash.replace("#", "");
+      if (hash === "signup") showAuthView("signup");
+      else showAuthView("login");
+
+      try {
+        const savedUser = JSON.parse(sessionStorage.getItem(SESSION_STORAGE_KEY));
+        if (savedUser && savedUser.username) {
+          currentUser = savedUser;
+          updateProfile();
+          applyRoleAccess();
+          authScreen.classList.add("hidden");
+          appShell.classList.remove("app-hidden");
+        }
+      } catch (error) {
+        sessionStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+    }
+
+    window.addEventListener("hashchange", () => {
+      const hash = location.hash.replace("#", "");
+      if (hash === "signup" || hash === "login") {
+        appShell.classList.add("app-hidden");
+        authScreen.classList.remove("hidden");
+        showAuthView(hash);
+      }
+    });
+    scoreDonation();
+    rankDonors();
+    renderRoute();
+    renderImpact();
+    restoreSession();
+
+    let remaining = 222;
+    setInterval(() => {
+      remaining = Math.max(0, remaining - 1);
+      const h = Math.floor(remaining / 60);
+      const m = remaining % 60;
+      document.getElementById("countdown").textContent = `Delivery should finish within ${h}h ${String(m).padStart(2, "0")}m.`;
+    }, 60000);
+  </script>
+</body>
+</html>
+
+
+
