@@ -1376,7 +1376,7 @@
             method: "POST",
             body: JSON.stringify({ donor_type: document.getElementById("donorType").value, food_name: document.getElementById("foodName").value, meals, hours, temperature: temp, packaging, location: document.getElementById("location").value }),
           });
-          renderSafetyFromAPI(res.safety_score, res.safety_label);
+          renderSafetyFromAPI(res.safety_score, res.safety_label, res.donation.ai_safety_analysis);
           renderMatchesFromAPI(res.ngo_matches);
           liveStatus.textContent = res.safety_score < 45 ? "Donation needs manual review" : "Nearby NGOs notified (backend)";
           return;
@@ -1395,12 +1395,19 @@
       liveStatus.textContent = score < 45 ? "Donation needs manual review" : "Nearby NGOs notified";
     }
 
-    function renderSafetyFromAPI(score, label) {
+    function renderSafetyFromAPI(score, label, aiAnalysis) {
       const ring = document.getElementById("scoreRing"); const text = document.getElementById("scoreText");
       const title = document.getElementById("safetyTitle"); const details = document.getElementById("safetyDetails"); const badge = document.getElementById("decisionBadge");
       ring.style.setProperty("--score", score);
       ring.style.background = `conic-gradient(${score < 45 ? "var(--red)" : score < 70 ? "var(--yellow)" : "var(--green)"} ${score}%, #e8eee9 0)`;
-      text.textContent = score; title.textContent = label.title; details.textContent = label.details;
+      text.textContent = score; title.textContent = label.title; 
+      
+      let detailsText = label.details;
+      if (aiAnalysis) {
+          detailsText += "\n\n🤖 Gemini AI Safety Advisor:\n" + aiAnalysis;
+      }
+      details.innerText = detailsText;
+      
       badge.textContent = label.badge;
       badge.className = "badge" + (label.badge_style === "hot" ? " hot" : label.badge_style === "warn" ? " warn" : "");
     }

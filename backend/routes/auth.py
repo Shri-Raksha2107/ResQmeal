@@ -4,7 +4,8 @@ from flask import Blueprint, request, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
-from db_store import load_db, save_db, next_id, now_iso
+from extensions import db
+from models import User
 from services.otp_service import create_otp, verify_otp
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
@@ -30,10 +31,9 @@ def send_otp():
     username = body["username"].strip().lower()
 
     # Check uniqueness
-    db = load_db()
-    if any(u["username"].lower() == username for u in db["users"]):
+    if User.query.filter(db.func.lower(User.username) == username).first():
         return jsonify({"error": "That username is already registered."}), 409
-    if any(u["phone"] == phone for u in db["users"]):
+    if User.query.filter_by(phone=phone).first():
         return jsonify({"error": "That phone number is already registered."}), 409
 
     otp_result = create_otp(phone)
@@ -61,22 +61,19 @@ def verify_otp_and_register():
         return jsonify({"error": "Invalid or expired OTP. Please try again."}), 400
 
     # Create user
-    db = load_db()
-    new_user = {
-        "id": next_id(db["users"]),
-        "full_name": body.get("full_name", "").strip(),
-        "username": body.get("username", "").strip().lower(),
-        "phone": phone,
-        "email": body.get("email", "").strip(),
-        "password_hash": generate_password_hash(body.get("password", "")),
-        "role": body.get("role", "donor"),
-        "is_verified": True,
-        "created_at": now_iso(),
-    }
-    db["users"].append(new_user)
-    save_db(db)
+    new_user = User(
+        full_name=body.get("full_name", "").strip(),
+        username=body.get("username", "").strip().lower(),
+        phone=phone,
+        email=body.get("email", "").strip(),
+        password_hash=generate_password_hash(body.get("password", "")),
+        role=body.get("role", "donor"),
+        is_verified=True,
+    )
+    db.session.add(new_user)
+    db.session.commit()
 
-    token = create_access_token(identity=str(new_user["id"]))
+    token = create_access_token(identity=str(new_user.id))
     return jsonify({
         "message": "Account created successfully.",
         "token": token,
@@ -102,15 +99,11 @@ def login():
     if not username or not password or not role:
         return jsonify({"error": "username, password, and role are required."}), 400
 
-    db = load_db()
-    user = next(
-        (u for u in db["users"] if u["username"].lower() == username and u["role"] == role),
-        None,
-    )
-    if not user or not check_password_hash(user["password_hash"], password):
+    user = User.query.filter(db.func.lower(User.username) == username, User.role == role).first()
+    if not user or not check_password_hash(user.password_hash, password):
         return jsonify({"error": "Invalid username, password, or user type."}), 401
 
-    token = create_access_token(identity=str(user["id"]))
+    token = create_access_token(identity=str(user.id))
     return jsonify({"token": token, "user": _safe_user(user)}), 200
 
 
@@ -121,8 +114,7 @@ def login():
 def me():
     """Return the current user's profile (JWT required)."""
     user_id = int(get_jwt_identity())
-    db = load_db()
-    user = next((u for u in db["users"] if u["id"] == user_id), None)
+    user = db.session.get(User, user_id)
     if not user:
         return jsonify({"error": "User not found."}), 404
     return jsonify(_safe_user(user)), 200
@@ -130,6 +122,15 @@ def me():
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _safe_user(user: dict) -> dict:
+def _safe_user(user: User) -> dict:
     """Return user dict without the password hash."""
-    return {k: v for k, v in user.items() if k != "password_hash"}
+    return {
+        "id": user.id,
+        "full_name": user.full_name,
+        "username": user.username,
+        "phone": user.phone,
+        "email": user.email,
+        "role": user.role,
+        "is_verified": user.is_verified,
+        "created_at": user.created_at.isoformat() + "Z" if user.created_at else None
+    }

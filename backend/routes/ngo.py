@@ -3,7 +3,8 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from db_store import load_db, save_db, next_id, now_iso
+from extensions import db
+from models import NGORequest, User
 from services.donor_ranking import rank_donors
 
 ngo_bp = Blueprint("ngo", __name__, url_prefix="/api/ngo")
@@ -31,26 +32,36 @@ def create_request():
 
     required_meals = int(people * 1.25)  # 25% buffer
 
-    db = load_db()
-    ngo_request = {
-        "id": next_id(db["ngo_requests"]),
-        "ngo_id": user_id,
-        "ngo_name": body.get("ngo_name", ""),
-        "people_needed": people,
-        "required_meals": required_meals,
-        "radius_km": radius,
-        "storage_type": body.get("storage_type", ""),
-        "notes": body.get("notes", ""),
-        "status": "open",
-        "created_at": now_iso(),
-    }
-    db["ngo_requests"].append(ngo_request)
-    save_db(db)
+    ngo_request = NGORequest(
+        ngo_id=user_id,
+        ngo_name=body.get("ngo_name", ""),
+        people_needed=people,
+        required_meals=required_meals,
+        radius_km=radius,
+        storage_type=body.get("storage_type", ""),
+        notes=body.get("notes", ""),
+        status="open"
+    )
+    db.session.add(ngo_request)
+    db.session.commit()
 
     donors = rank_donors(radius)
 
+    req_dict = {
+        "id": ngo_request.id,
+        "ngo_id": ngo_request.ngo_id,
+        "ngo_name": ngo_request.ngo_name,
+        "people_needed": ngo_request.people_needed,
+        "required_meals": ngo_request.required_meals,
+        "radius_km": ngo_request.radius_km,
+        "storage_type": ngo_request.storage_type,
+        "notes": ngo_request.notes,
+        "status": ngo_request.status,
+        "created_at": ngo_request.created_at.isoformat() + "Z" if ngo_request.created_at else None
+    }
+
     return jsonify({
-        "request": ngo_request,
+        "request": req_dict,
         "required_meals": required_meals,
         "ranked_donors": donors,
     }), 201
@@ -63,14 +74,28 @@ def create_request():
 def list_requests():
     """List NGO requests for the current user."""
     user_id = int(get_jwt_identity())
-    db = load_db()
-    user = next((u for u in db["users"] if u["id"] == user_id), {})
-    role = user.get("role", "ngo")
+    user = db.session.get(User, user_id)
+    role = user.role if user else "ngo"
 
     if role == "ngo":
-        result = [r for r in db["ngo_requests"] if r["ngo_id"] == user_id]
+        requests = NGORequest.query.filter_by(ngo_id=user_id).all()
     else:
-        result = db["ngo_requests"]
+        requests = NGORequest.query.all()
+
+    result = []
+    for r in requests:
+        result.append({
+            "id": r.id,
+            "ngo_id": r.ngo_id,
+            "ngo_name": r.ngo_name,
+            "people_needed": r.people_needed,
+            "required_meals": r.required_meals,
+            "radius_km": r.radius_km,
+            "storage_type": r.storage_type,
+            "notes": r.notes,
+            "status": r.status,
+            "created_at": r.created_at.isoformat() + "Z" if r.created_at else None
+        })
 
     return jsonify(result), 200
 
@@ -81,10 +106,23 @@ def list_requests():
 @jwt_required()
 def get_request(request_id: int):
     """Get a single NGO request with ranked donors."""
-    db = load_db()
-    ngo_req = next((r for r in db["ngo_requests"] if r["id"] == request_id), None)
+    ngo_req = db.session.get(NGORequest, request_id)
     if not ngo_req:
         return jsonify({"error": "Request not found."}), 404
 
-    donors = rank_donors(ngo_req["radius_km"])
-    return jsonify({"request": ngo_req, "ranked_donors": donors}), 200
+    donors = rank_donors(ngo_req.radius_km)
+    
+    req_dict = {
+        "id": ngo_req.id,
+        "ngo_id": ngo_req.ngo_id,
+        "ngo_name": ngo_req.ngo_name,
+        "people_needed": ngo_req.people_needed,
+        "required_meals": ngo_req.required_meals,
+        "radius_km": ngo_req.radius_km,
+        "storage_type": ngo_req.storage_type,
+        "notes": ngo_req.notes,
+        "status": ngo_req.status,
+        "created_at": ngo_req.created_at.isoformat() + "Z" if ngo_req.created_at else None
+    }
+    
+    return jsonify({"request": req_dict, "ranked_donors": donors}), 200

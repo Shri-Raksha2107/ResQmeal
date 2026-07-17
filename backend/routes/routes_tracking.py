@@ -1,9 +1,11 @@
 """routes/routes_tracking.py – Optimized route & tracking endpoints."""
 
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from db_store import load_db, save_db, now_iso
+from extensions import db
+from models import Donation
 
 routes_bp = Blueprint("routes_tracking", __name__, url_prefix="/api/routes")
 
@@ -27,29 +29,28 @@ def get_routes():
         donation_id  (optional) – if provided, builds route from that donation
     """
     donation_id = request.args.get("donation_id", type=int)
-    db = load_db()
 
     if donation_id:
-        donation = next((d for d in db["donations"] if d["id"] == donation_id), None)
+        donation = db.session.get(Donation, donation_id)
         if not donation:
             return jsonify({"error": "Donation not found."}), 404
 
         # Find the best-matched NGO to build a simple 2-stop route
         from services.matching import rank_ngos
-        matches = rank_ngos(donation["safety_score"], donation["meals"], donation["hours"])
+        matches = rank_ngos(donation.safety_score, donation.meals, donation.hours)
         best_ngo = matches[0] if matches else {"name": "Nearest NGO"}
 
         stops = [
             {
                 "stop_order": 1,
-                "name": donation.get("location", "Pickup Location"),
-                "description": f"{donation['meals']} meals",
+                "name": donation.location or "Pickup Location",
+                "description": f"{donation.meals} meals",
                 "time": "Soon",
                 "type": "pickup",
             },
             {
                 "stop_order": 2,
-                "name": best_ngo["name"],
+                "name": best_ngo.get("name", "Nearest NGO"),
                 "description": "Delivery",
                 "time": "ETA ~30 min",
                 "type": "delivery",
@@ -57,7 +58,30 @@ def get_routes():
         ]
         return jsonify({"stops": stops}), 200
 
-    # Fall back to seed data
+    # Return active donations as route segments
+    active_donations = Donation.query.filter(Donation.status.in_(["active", "matched"])).all()
+    if active_donations:
+        stops = []
+        order = 1
+        for d in active_donations:
+            stops.append({
+                "stop_order": order,
+                "name": d.location or d.donor_type or "Pickup Location",
+                "description": f"{d.meals} meals (Pickup)",
+                "time": "Pending",
+                "type": "pickup"
+            })
+            order += 1
+        stops.append({
+            "stop_order": order,
+            "name": "Matched NGO",
+            "description": "Delivery",
+            "time": "ETA ~30 min",
+            "type": "delivery"
+        })
+        return jsonify({"stops": stops}), 200
+
+    # Fall back to seed data if empty
     return jsonify({"stops": _SEED_ROUTE}), 200
 
 
@@ -67,11 +91,17 @@ def get_routes():
 @jwt_required()
 def confirm_pickup(donation_id: int):
     """Mark a donation as matched (pickup confirmed)."""
-    db = load_db()
-    for donation in db["donations"]:
-        if donation["id"] == donation_id:
-            donation["status"] = "matched"
-            donation["pickup_confirmed_at"] = now_iso()
-            save_db(db)
-            return jsonify({"message": "Pickup confirmed.", "donation": donation}), 200
+    donation = db.session.get(Donation, donation_id)
+    if donation:
+        donation.status = "matched"
+        donation.pickup_confirmed_at = datetime.utcnow()
+        db.session.commit()
+        
+        donation_dict = {
+            "id": donation.id,
+            "status": donation.status,
+            "pickup_confirmed_at": donation.pickup_confirmed_at.isoformat() + "Z" if donation.pickup_confirmed_at else None
+        }
+        return jsonify({"message": "Pickup confirmed.", "donation": donation_dict}), 200
+        
     return jsonify({"error": "Donation not found."}), 404

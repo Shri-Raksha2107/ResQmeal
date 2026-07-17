@@ -1,52 +1,70 @@
 """
 services/donor_ranking.py
 
-Priority ranking of food donors for an NGO request.
-Mirrors the frontend JS priority formula.
+Donor ranking and filtering for NGOs.
+Ranks potential donors based on their donation history and current active donations.
 """
 
-from __future__ import annotations
 from typing import List, Dict, Any
 
+from extensions import db
+from models import User, Donation
 
-# Seed donor profiles so the NGO tab always has data even before real donors sign up.
-_SEED_DONORS: List[Dict[str, Any]] = [
-    {"id": 1, "name": "Green Leaf Restaurant",  "distance_km": 1.4, "avg_meals": 38, "today_meals": 44, "urgency": 72},
-    {"id": 2, "name": "Sri Devi Wedding Hall",  "distance_km": 2.1, "avg_meals": 130, "today_meals": 150, "urgency": 94},
-    {"id": 3, "name": "City Hostel Mess",       "distance_km": 3.2, "avg_meals": 55, "today_meals": 49, "urgency": 64},
-    {"id": 4, "name": "FreshMart Supermarket",  "distance_km": 4.7, "avg_meals": 28, "today_meals": 32, "urgency": 48},
-]
-
-
-def rank_donors(
-    radius_km: float,
-    donor_profiles: List[Dict[str, Any]] | None = None,
-) -> List[Dict[str, Any]]:
+def rank_donors(radius_km: float = 5.0) -> List[Dict[str, Any]]:
     """
-    Rank donors for an NGO food request.
+    Rank donors dynamically based on their actual donation history.
 
     Parameters
     ----------
-    radius_km      : maximum search radius in km
-    donor_profiles : list of donor dicts (uses seed data if None / empty)
+    radius_km : The search radius requested by the NGO.
 
     Returns
     -------
-    List of donor dicts within radius, sorted descending by priority_score,
-    each augmented with a ``priority_score`` field.
+    List of donor dictionaries sorted by urgency and average meals.
     """
-    profiles = donor_profiles if donor_profiles else _SEED_DONORS
+    donors_query = User.query.filter_by(role="donor").all()
+    ranked_donors = []
 
-    in_range = [d for d in profiles if d.get("distance_km", d.get("distance", 0)) <= radius_km]
+    for donor in donors_query:
+        # Get all donations for this donor
+        donations = Donation.query.filter_by(donor_id=donor.id).all()
+        
+        total_meals = sum(d.meals for d in donations)
+        avg_meals = int(total_meals / len(donations)) if donations else 0
+        
+        # Calculate active urgency based on any currently active donations
+        active = [d for d in donations if d.status == "active"]
+        if active:
+            avg_hours = sum(d.hours for d in active) / len(active)
+            if avg_hours <= 2:
+                urgency = "high"
+            elif avg_hours <= 5:
+                urgency = "medium"
+            else:
+                urgency = "low"
+        else:
+            urgency = "none"
 
-    ranked: List[Dict[str, Any]] = []
-    for donor in in_range:
-        today = donor.get("today_meals", donor.get("today", 0))
-        avg   = donor.get("avg_meals",   donor.get("avg",   0))
-        urg   = donor.get("urgency", 50)
-        dist  = donor.get("distance_km", donor.get("distance", 1))
-        priority = int(round(today * 0.45 + avg * 0.35 + urg * 0.2 - dist * 3))
-        ranked.append({**donor, "priority_score": priority})
+        # Mock distance for demonstration as we don't have geo-coords
+        distance = 2.0  
 
-    ranked.sort(key=lambda x: x["priority_score"], reverse=True)
-    return ranked
+        ranked_donors.append({
+            "id": donor.id,
+            "name": donor.full_name,
+            "type": "restaurant" if "restaurant" in donor.full_name.lower() else "event",
+            "distance_km": distance,
+            "avg_meals": avg_meals,
+            "today_meals": sum(d.meals for d in active),
+            "reliability": 98 if donor.is_verified else 85,
+            "urgency": urgency,
+            "verified": donor.is_verified,
+        })
+
+    # Sort primarily by urgency, then reliability
+    urgency_val = {"high": 3, "medium": 2, "low": 1, "none": 0}
+    ranked_donors.sort(
+        key=lambda x: (urgency_val.get(x["urgency"], 0), x["reliability"]),
+        reverse=True
+    )
+
+    return ranked_donors

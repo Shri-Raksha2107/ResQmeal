@@ -30,6 +30,11 @@ def create_app() -> Flask:
     app.config.from_object(Config)
 
     # ── Extensions ────────────────────────────────────────────────────────────
+    from extensions import db, migrate
+    import models
+
+    db.init_app(app)
+    migrate.init_app(app, db)
     CORS(app, origins=Config.CORS_ORIGINS, supports_credentials=True)
     JWTManager(app)
 

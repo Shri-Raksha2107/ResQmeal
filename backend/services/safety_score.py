@@ -46,7 +46,48 @@ def compute_safety_score(
     return int(max(18, min(98, round(score))))
 
 
-def score_label(score: int, hours: int, packaging: str) -> dict:
+def score_label(score: int, hours: int, packaging: str) -> str:
+    """Return a human-readable safety label based on the numerical score."""
+    if hours > 12 and packaging == "open":
+        return "Not Recommended"
+    if score >= 90:
+        return "Excellent"
+    if score >= 75:
+        return "Good"
+    if score >= 50:
+        return "Acceptable"
+    return "Not Recommended"
+
+
+def analyze_food_safety_ai(food_name: str, hours: int, temp: str, packaging: str) -> str:
+    """
+    Query Gemini for a detailed food safety analysis. 
+    Returns a short markdown string.
+    """
+    import google.generativeai as genai
+    from config import Config
+
+    if not Config.GEMINI_API_KEY:
+        return ""
+
+    try:
+        genai.configure(api_key=Config.GEMINI_API_KEY)
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        
+        prompt = (
+            f"You are a food safety expert. I am donating '{food_name}'. "
+            f"It will be stored at {temp} temperature in {packaging} packaging for {hours} hours.\n"
+            "Provide a brief (2-3 sentences max) food safety advisory. Mention any specific risks for this type of food and storage conditions."
+        )
+        
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        print(f"Gemini Food Safety AI Error: {e}")
+        return ""
+
+
+def score_details(score: int, hours: int, packaging: str) -> dict:
     """
     Return a human-readable decision dict based on the score.
 

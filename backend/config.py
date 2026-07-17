@@ -14,8 +14,14 @@ class Config:
     JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=12)
 
     # ── Storage ───────────────────────────────────────────────────────────────
-    # Flat JSON file – replace with DATABASE_URL when switching to PostgreSQL
-    DB_FILE: str = os.path.join(os.path.dirname(__file__), "db.json")
+    # PostgreSQL Database
+    SQLALCHEMY_DATABASE_URI: str = os.getenv("DATABASE_URL", "sqlite:///app.db")
+    if SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
+        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Gemini API
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
 
     # File upload directory
     UPLOAD_FOLDER: str = os.path.join(os.path.dirname(__file__), "static", "uploads")

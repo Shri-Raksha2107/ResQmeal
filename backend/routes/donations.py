@@ -1,11 +1,13 @@
 """routes/donations.py – Donor donation endpoints."""
 
 import os
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from config import Config
-from db_store import load_db, save_db, next_id, now_iso
+from extensions import db
+from models import Donation, User
 from services.safety_score import compute_safety_score, score_label
 from services.matching import rank_ngos
 
@@ -48,43 +50,56 @@ def create_donation():
     photo_path = None
     if photo and photo.filename:
         os.makedirs(Config.UPLOAD_FOLDER, exist_ok=True)
-        safe_name = f"{now_iso().replace(':', '-')}_{photo.filename}"
+        safe_name = f"{datetime.utcnow().isoformat().replace(':', '-')}_{photo.filename}"
         full_path = os.path.join(Config.UPLOAD_FOLDER, safe_name)
         photo.save(full_path)
         photo_path = f"/static/uploads/{safe_name}"
 
     # Score
+    from services.safety_score import analyze_food_safety_ai, score_details
     score = compute_safety_score(meals, hours, temperature, packaging)
-    label = score_label(score, hours, packaging)
+    label = score_details(score, hours, packaging)
+    ai_analysis = analyze_food_safety_ai(data.get("food_name", ""), hours, temperature, packaging)
 
-    db = load_db()
-    donation = {
-        "id": next_id(db["donations"]),
-        "donor_id": user_id,
-        "donor_type": data.get("donor_type", ""),
-        "food_name": data.get("food_name", ""),
-        "meals": meals,
-        "hours": hours,
-        "temperature": temperature,
-        "packaging": packaging,
-        "location": data.get("location", ""),
-        "photo_path": photo_path,
-        "safety_score": score,
-        "status": "active",
-        "created_at": now_iso(),
-    }
-    db["donations"].append(donation)
-
-    # Update aggregate impact stats
-    db["impact"]["meals_saved"] += meals
-
-    save_db(db)
+    donation = Donation(
+        donor_id=user_id,
+        donor_type=data.get("donor_type", ""),
+        food_name=data.get("food_name", ""),
+        meals=meals,
+        hours=hours,
+        temperature=temperature,
+        packaging=packaging,
+        location=data.get("location", ""),
+        photo_path=photo_path,
+        safety_score=score,
+        ai_safety_analysis=ai_analysis,
+        status="active"
+    )
+    db.session.add(donation)
+    db.session.commit()
 
     # Rank NGOs
     matches = rank_ngos(score, meals, hours)
 
+    donation_dict = {
+        "id": donation.id,
+        "donor_id": donation.donor_id,
+        "donor_type": donation.donor_type,
+        "food_name": donation.food_name,
+        "meals": donation.meals,
+        "hours": donation.hours,
+        "temperature": donation.temperature,
+        "packaging": donation.packaging,
+        "location": donation.location,
+        "photo_path": donation.photo_path,
+        "safety_score": donation.safety_score,
+        "ai_safety_analysis": donation.ai_safety_analysis,
+        "status": donation.status,
+        "created_at": donation.created_at.isoformat() + "Z" if donation.created_at else None
+    }
+
     return jsonify({
-        "donation": donation,
+        "donation": donation_dict,
         "safety_score": score,
         "safety_label": label,
         "ngo_matches": matches,
@@ -98,14 +113,32 @@ def create_donation():
 def list_donations():
     """List donations.  Donors see their own; future admin role sees all."""
     user_id = int(get_jwt_identity())
-    db = load_db()
-    user = next((u for u in db["users"] if u["id"] == user_id), {})
-    role = user.get("role", "donor")
+    user = db.session.get(User, user_id)
+    role = user.role if user else "donor"
 
     if role == "donor":
-        result = [d for d in db["donations"] if d["donor_id"] == user_id]
+        donations = Donation.query.filter_by(donor_id=user_id).all()
     else:
-        result = db["donations"]
+        donations = Donation.query.all()
+
+    result = []
+    for d in donations:
+        result.append({
+            "id": d.id,
+            "donor_id": d.donor_id,
+            "donor_type": d.donor_type,
+            "food_name": d.food_name,
+            "meals": d.meals,
+            "hours": d.hours,
+            "temperature": d.temperature,
+            "packaging": d.packaging,
+            "location": d.location,
+            "photo_path": d.photo_path,
+            "safety_score": d.safety_score,
+            "ai_safety_analysis": d.ai_safety_analysis,
+            "status": d.status,
+            "created_at": d.created_at.isoformat() + "Z" if d.created_at else None
+        })
 
     return jsonify(result), 200
 
@@ -116,17 +149,34 @@ def list_donations():
 @jwt_required()
 def get_donation(donation_id: int):
     """Get a single donation with its ranked NGO matches."""
-    db = load_db()
-    donation = next((d for d in db["donations"] if d["id"] == donation_id), None)
+    donation = db.session.get(Donation, donation_id)
     if not donation:
         return jsonify({"error": "Donation not found."}), 404
 
     matches = rank_ngos(
-        donation["safety_score"],
-        donation["meals"],
-        donation["hours"],
+        donation.safety_score,
+        donation.meals,
+        donation.hours,
     )
-    return jsonify({"donation": donation, "ngo_matches": matches}), 200
+    
+    donation_dict = {
+        "id": donation.id,
+        "donor_id": donation.donor_id,
+        "donor_type": donation.donor_type,
+        "food_name": donation.food_name,
+        "meals": donation.meals,
+        "hours": donation.hours,
+        "temperature": donation.temperature,
+        "packaging": donation.packaging,
+        "location": donation.location,
+        "photo_path": donation.photo_path,
+        "safety_score": donation.safety_score,
+        "ai_safety_analysis": donation.ai_safety_analysis,
+        "status": donation.status,
+        "created_at": donation.created_at.isoformat() + "Z" if donation.created_at else None
+    }
+    
+    return jsonify({"donation": donation_dict, "ngo_matches": matches}), 200
 
 
 # ── PATCH /api/donations/<id>/status ─────────────────────────────────────────
@@ -141,14 +191,18 @@ def update_status(donation_id: int):
     if new_status not in allowed:
         return jsonify({"error": f"status must be one of {allowed}"}), 400
 
-    db = load_db()
-    for donation in db["donations"]:
-        if donation["id"] == donation_id:
-            donation["status"] = new_status
-            save_db(db)
-            return jsonify(donation), 200
-
-    return jsonify({"error": "Donation not found."}), 404
+    donation = db.session.get(Donation, donation_id)
+    if not donation:
+        return jsonify({"error": "Donation not found."}), 404
+        
+    donation.status = new_status
+    db.session.commit()
+    
+    donation_dict = {
+        "id": donation.id,
+        "status": donation.status
+    }
+    return jsonify(donation_dict), 200
 
 
 # ── POST /api/donations/<id>/analyze ─────────────────────────────────────────
@@ -157,20 +211,27 @@ def update_status(donation_id: int):
 @jwt_required()
 def analyze_donation(donation_id: int):
     """Re-run AI scoring and return updated NGO matches."""
-    db = load_db()
-    donation = next((d for d in db["donations"] if d["id"] == donation_id), None)
+    donation = db.session.get(Donation, donation_id)
     if not donation:
         return jsonify({"error": "Donation not found."}), 404
 
+    from services.safety_score import analyze_food_safety_ai, score_details
     score = compute_safety_score(
-        donation["meals"], donation["hours"],
-        donation["temperature"], donation["packaging"]
+        donation.meals, donation.hours,
+        donation.temperature, donation.packaging
     )
-    label = score_label(score, donation["hours"], donation["packaging"])
-    matches = rank_ngos(score, donation["meals"], donation["hours"])
+    label = score_details(score, donation.hours, donation.packaging)
+    ai_analysis = analyze_food_safety_ai(donation.food_name, donation.hours, donation.temperature, donation.packaging)
+    
+    donation.safety_score = score
+    donation.ai_safety_analysis = ai_analysis
+    db.session.commit()
+
+    matches = rank_ngos(score, donation.meals, donation.hours)
 
     return jsonify({
         "safety_score": score,
         "safety_label": label,
+        "ai_safety_analysis": ai_analysis,
         "ngo_matches": matches,
     }), 200

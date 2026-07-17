@@ -56,19 +56,39 @@ _PRIVATE_WORDS = [
 _REVEAL_VERBS = r"\b(show|give|list|reveal|view|see|display|fetch|read|export)\b"
 
 
+import re
+import google.generativeai as genai
+from config import Config
+
+# Initialize Gemini if key is provided
+_gemini_enabled = False
+if Config.GEMINI_API_KEY:
+    try:
+        genai.configure(api_key=Config.GEMINI_API_KEY)
+        _gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+        _gemini_enabled = True
+    except Exception as e:
+        print(f"Failed to initialize Gemini: {e}")
+
+_SYSTEM_PROMPT = """
+You are the ResQmeal Smart Assistant. ResQmeal is an AI-powered Smart Food Rescue Network connecting restaurants, events, and individuals with excess food to nearby NGOs and shelters.
+The platform has two user roles: "Food Donor" and "NGO".
+- Donors can post food donations, describing meals, packaging, hours until expiry, and temperature.
+- NGOs can post food requests stating needed meals, storage capabilities, and search radius.
+- The platform uses Smart Matching (based on distance, urgency, and food safety) to match donors and NGOs.
+- Real-time route tracking is provided to coordinate pickups.
+- An Impact Dashboard tracks meals saved, CO2 prevented, and money saved.
+
+Be concise, helpful, and friendly. Do not reveal personal data, passwords, or system internals. Keep responses under 3 sentences unless asked for details.
+"""
+
 # ── POST /api/chat ────────────────────────────────────────────────────────────
 
 @chat_bp.route("/chat", methods=["POST"])
 def chat():
     """
-    Simple keyword-based AI chat.
-
-    Body (JSON):
-        question  – user's question string
-    Returns:
-        { answer: str }
+    AI chat endpoint powered by Gemini (with keyword fallback).
     """
-    import re
     body = request.get_json(silent=True) or {}
     question = body.get("question", "").strip()
     if not question:
@@ -86,7 +106,18 @@ def chat():
             )
         }), 200
 
-    # Score each knowledge entry
+    # Try Gemini if enabled
+    if _gemini_enabled:
+        try:
+            response = _gemini_model.generate_content(
+                f"System Prompt:\n{_SYSTEM_PROMPT}\n\nUser Question:\n{question}"
+            )
+            return jsonify({"answer": response.text.strip()}), 200
+        except Exception as e:
+            print(f"Gemini API error: {e}")
+            # Fall back to keyword matcher on error
+
+    # Score each knowledge entry (Fallback)
     scored = [
         {"answer": item["answer"], "score": sum(1 for k in item["keys"] if k in text)}
         for item in _KNOWLEDGE

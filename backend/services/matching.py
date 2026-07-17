@@ -2,45 +2,14 @@
 services/matching.py
 
 NGO matching service.
-Ranks the registered NGOs (or those supplied as seed data) against a donation
-and returns a sorted list with match percentages.
+Ranks the registered NGOs against a donation and returns a sorted list with match percentages.
 """
 
 from __future__ import annotations
 from typing import List, Dict, Any
 
-
-# Seed NGO profiles used when no NGOs are found in the database.
-_SEED_NGOS: List[Dict[str, Any]] = [
-    {
-        "id": 1,
-        "name": "Hope Shelter",
-        "distance_km": 1.8,
-        "need": 110,
-        "vehicle": "van",
-        "storage": "serve now",
-        "verified": True,
-    },
-    {
-        "id": 2,
-        "name": "Anbu Old Age Home",
-        "distance_km": 2.6,
-        "need": 70,
-        "vehicle": "auto",
-        "storage": "hot meals",
-        "verified": True,
-    },
-    {
-        "id": 3,
-        "name": "Little Hands Home",
-        "distance_km": 4.3,
-        "need": 95,
-        "vehicle": "bike + car",
-        "storage": "sealed only",
-        "verified": True,
-    },
-]
-
+from extensions import db
+from models import User, NGORequest
 
 def rank_ngos(
     safety_score: int,
@@ -49,21 +18,34 @@ def rank_ngos(
     ngo_profiles: List[Dict[str, Any]] | None = None,
 ) -> List[Dict[str, Any]]:
     """
-    Rank NGOs for a given donation.
-
-    Parameters
-    ----------
-    safety_score  : pre-computed safety score (0–100)
-    meals         : number of meal portions in the donation
-    hours         : hours remaining before expiry
-    ngo_profiles  : list of NGO dicts (uses seed data if None / empty)
-
-    Returns
-    -------
-    List of NGO dicts sorted descending by match_score, each augmented with
-    a ``match_score`` field (0–99).
+    Rank NGOs for a given donation based on active requests in the database.
     """
-    profiles = ngo_profiles if ngo_profiles else _SEED_NGOS
+    if ngo_profiles is not None:
+        profiles = ngo_profiles
+    else:
+        profiles = []
+        # Query active NGO requests from the DB
+        open_requests = NGORequest.query.filter_by(status="open").all()
+        for req in open_requests:
+            ngo_user = db.session.get(User, req.ngo_id)
+            if not ngo_user:
+                continue
+            profiles.append({
+                "id": ngo_user.id,
+                "name": req.ngo_name or ngo_user.full_name,
+                "distance_km": req.radius_km, # Mocking distance by using radius
+                "need": req.required_meals,
+                "vehicle": "auto" if req.required_meals < 50 else "van",
+                "storage": req.storage_type or "serve now",
+                "verified": ngo_user.is_verified,
+            })
+            
+    # Fallback to a single generic NGO if database is completely empty
+    if not profiles:
+        profiles = [{
+            "id": 0, "name": "General Local Shelter", "distance_km": 5.0,
+            "need": 100, "vehicle": "van", "storage": "serve now", "verified": True
+        }]
 
     ranked: List[Dict[str, Any]] = []
     for ngo in profiles:

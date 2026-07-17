@@ -15,7 +15,8 @@ import string
 from datetime import datetime, timedelta
 
 from config import Config
-from db_store import load_db, save_db, next_id, now_iso
+from extensions import db
+from models import OTP
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -24,17 +25,14 @@ def _generate_code(length: int = 6) -> str:
     return "".join(random.choices(string.digits, k=length))
 
 
-def _expiry_iso() -> str:
-    expiry = datetime.utcnow() + timedelta(seconds=Config.OTP_EXPIRY_SECONDS)
-    return expiry.isoformat() + "Z"
+def _expiry_iso() -> datetime:
+    return datetime.utcnow() + timedelta(seconds=Config.OTP_EXPIRY_SECONDS)
 
 
-def _is_expired(otp_record: dict) -> bool:
-    try:
-        expires_at = datetime.fromisoformat(otp_record["expires_at"].replace("Z", ""))
-    except (KeyError, ValueError):
+def _is_expired(otp_record: OTP) -> bool:
+    if not otp_record.expires_at:
         return True
-    return datetime.utcnow() > expires_at
+    return datetime.utcnow() > otp_record.expires_at
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -46,25 +44,20 @@ def create_otp(phone: str) -> dict:
     - Invalidates any previous unused OTPs for this phone.
     - Returns a dict with ``otp_code`` (in dev mode) and ``expires_in`` seconds.
     """
-    db = load_db()
     code = _generate_code()
     expiry = _expiry_iso()
 
     # Invalidate old OTPs for this phone
-    for record in db["otps"]:
-        if record["phone"] == phone and not record.get("used"):
-            record["used"] = True
+    OTP.query.filter_by(phone=phone, used=False).update({"used": True})
 
-    new_record = {
-        "id": next_id(db["otps"]),
-        "phone": phone,
-        "otp_code": code,
-        "expires_at": expiry,
-        "used": False,
-        "created_at": now_iso(),
-    }
-    db["otps"].append(new_record)
-    save_db(db)
+    new_record = OTP(
+        phone=phone,
+        otp_code=code,
+        expires_at=expiry,
+        used=False,
+    )
+    db.session.add(new_record)
+    db.session.commit()
 
     # Simulate sending SMS here (Twilio integration point)
     # if not Config.OTP_DEV_MODE:
@@ -81,24 +74,17 @@ def verify_otp(phone: str, code: str) -> bool:
     Verify that `code` is the most recent valid OTP for `phone`.
     Marks the OTP as used on success.
     """
-    db = load_db()
     # Find the latest valid OTP for this phone
-    matching = [
-        r for r in db["otps"]
-        if r["phone"] == phone
-        and r["otp_code"] == code
-        and not r.get("used")
-        and not _is_expired(r)
-    ]
-    if not matching:
+    record = OTP.query.filter_by(
+        phone=phone,
+        otp_code=code,
+        used=False
+    ).order_by(OTP.id.desc()).first()
+
+    if not record or _is_expired(record):
         return False
 
     # Mark as used
-    otp_id = matching[-1]["id"]
-    for record in db["otps"]:
-        if record["id"] == otp_id:
-            record["used"] = True
-            break
-
-    save_db(db)
+    record.used = True
+    db.session.commit()
     return True
